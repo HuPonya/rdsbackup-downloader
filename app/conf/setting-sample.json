@@ -1,0 +1,10 @@
+{
+    "key_id": "",
+    "key_secret": "",
+    "dbid": "",
+    "data_dir": "/opt/project/tmp",
+    "search_before_days": 7,
+    "fetch_fullbacup": false,
+    "fetch_binlog": true,
+    "aria2_bin": ""
+}
