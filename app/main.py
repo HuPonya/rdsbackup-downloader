@@ -139,6 +139,16 @@ def _make_request(params):
     except ValueError as e:
         raise SystemExit(e)
 
+def _add_lockfile(path):
+    # TODO: check lockfile if file already exist script should throw error
+    lockfile = "%s/.lock" % path
+    with open(lockfile, 'a'):
+        os.utime(lockfile, None)
+
+def _remove_lockfile(path):
+    os.remove("%s/.lock" % path)
+
+
 def get_download_info():
     #FUCK YOU ALIYUN
     #api DescribeBackups time format yyyy-MM-dd’T’HH:mmZ
@@ -237,6 +247,7 @@ def exec_download_job(job_files):
         job_file = job_files['fucll_backup']
         logger.info("# Starting download fullbackup files, job file: %s", job_file)
 
+        _add_lockfile(FULLBACUP_DIR)
         p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
             close_fds=True, bufsize = 1, universal_newlines = True)
         output, err = p.communicate()
@@ -245,12 +256,14 @@ def exec_download_job(job_files):
         else:
             logger.info("# Download fullbackup files error")
 
+        _remove_lockfile(FULLBACUP_DIR)
         logger.debug("aria2 return:\n%s", output)
 
     if FETCH_BINLOG:
         job_file = job_files['binglog']
         logger.info("# Starting download binlog files, job file: %s", job_file)
 
+        _add_lockfile(BINLOG_DIR)
         p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
             close_fds=True, bufsize = 1, universal_newlines = True)
         output, err = p.communicate()
@@ -259,6 +272,7 @@ def exec_download_job(job_files):
         else:
             logger.info("# Download binlog files error")
 
+        _remove_lockfile(BINLOG_DIR)
         logger.debug("aria2 return:\n%s", output)
 
 def main():
