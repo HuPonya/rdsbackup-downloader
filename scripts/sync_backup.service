@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync local backup files to company archive server
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+ExecStart=/opt/db_backup/scripts/sync_backup.sh
+
+[Install]
+WantedBy=multi-user.target

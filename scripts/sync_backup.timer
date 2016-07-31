@@ -1,0 +1,9 @@
+[Unit]
+Description=Run sync_backup everyday 0am
+ 
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Unit=sync_backup.service
+ 
+[Install]
+WantedBy=multi-user.target

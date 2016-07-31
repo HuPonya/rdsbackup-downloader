@@ -9,6 +9,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cp -f $DIR/rdsbackup.service /etc/systemd/system/
 cp -f $DIR/rdsbackup.timer /etc/systemd/system/
 
+cp -f $DIR/sync_backup.service /etc/systemd/system/
+cp -f $DIR/sync_backup.timer /etc/systemd/system/
+
 systemctl daemon-reload
 
 exit 0
