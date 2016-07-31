@@ -1,0 +1,9 @@
+[Unit]
+Description=Run rdsbackup everyday 6am
+ 
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Unit=rdsbackup.service
+ 
+[Install]
+WantedBy=multi-user.target

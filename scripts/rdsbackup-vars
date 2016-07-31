@@ -1,0 +1,5 @@
+CONTAINER_NAME="rdsbackup.service"
+IMAGE_NAME="rdsbackup-downloader"
+
+APP_DIR="/opt/db_backup/app"
+DATA_DIR="/opt/db_backup/data"

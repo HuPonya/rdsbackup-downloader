@@ -5,4 +5,5 @@ VERSION
 README.md
 
 app/conf
+scrpits/
 sftp-config.json
