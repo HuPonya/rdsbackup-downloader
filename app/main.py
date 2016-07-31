@@ -198,10 +198,11 @@ def make_donwload_job(infos):
     if not os.path.exists(JOB_DIR):
         os.makedirs(JOB_DIR)
 
+    jobfiles = {}
     now = time.strftime("%Y-%m-%d", time.gmtime())
-    filename = "%s/%s.txt" % (JOB_DIR, now)
-    with open(filename, 'w') as f:
-        if FETCH_FULLBACUP:
+    if FETCH_FULLBACUP:
+        filename = "%s/full_%s.txt" % (JOB_DIR, now)
+        with open(filename, 'w') as f:
             for item in infos['full_backups']:
                 f.write(item['url'])
                 f.write('\n')
@@ -211,8 +212,11 @@ def make_donwload_job(infos):
                 f.write(" continue=true\n")
                 f.write(" max-connection-per-server=10\n")
                 f.write("  split=10\n\n")
+        jobfiles['fucll_backup'] = filename
 
-        if FETCH_BINLOG:
+    if FETCH_BINLOG:           
+        filename = "%s/binlog_%s.txt" % (JOB_DIR, now)
+        with open(filename, 'w') as f:
             for item in infos['binlogs']:
                 f.write(item['url'])
                 f.write('\n')
@@ -224,20 +228,38 @@ def make_donwload_job(infos):
                 f.write(" continue=true\n")
                 f.write(" max-connection-per-server=10\n")
                 f.write("  split=10\n\n")
+            jobfiles['binglog'] = filename
 
-    return filename
+    return jobfiles
 
-def exec_download_job(job_file):
-    logger.info("# Starting exec aria2c download files, job file: %s", job_file)
-    p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
-     close_fds=True, bufsize = 1, universal_newlines = True)
-    output, err = p.communicate()
-    if p.returncode == 0:
-        logger.info("# Download file success")
-    else:
-        logger.info("# Transfer file error")
+def exec_download_job(job_files):
+    if FETCH_FULLBACUP:
+        job_file = job_files['fucll_backup']
+        logger.info("# Starting download fullbackup files, job file: %s", job_file)
 
-    logger.debug("aria2 return:\n%s", output)
+        p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
+            close_fds=True, bufsize = 1, universal_newlines = True)
+        output, err = p.communicate()
+        if p.returncode == 0:
+            logger.info("# Download fullbackup files success")
+        else:
+            logger.info("# Download fullbackup files error")
+
+        logger.debug("aria2 return:\n%s", output)
+
+    if FETCH_BINLOG:
+        job_file = job_files['binglog']
+        logger.info("# Starting download binlog files, job file: %s", job_file)
+
+        p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
+            close_fds=True, bufsize = 1, universal_newlines = True)
+        output, err = p.communicate()
+        if p.returncode == 0:
+            logger.info("# Download binlog files success")
+        else:
+            logger.info("# Download binlog files error")
+
+        logger.debug("aria2 return:\n%s", output)
 
 def main():
     logger.info("# Downloader starting...")
