@@ -141,6 +141,8 @@ def _make_request(params):
 
 def _add_lockfile(path):
     # TODO: check lockfile if file already exist script should throw error
+    if not os.path.exists(path):
+        os.makedirs(path)
     lockfile = "%s/.lock" % path
     with open(lockfile, 'a'):
         os.utime(lockfile, None)
