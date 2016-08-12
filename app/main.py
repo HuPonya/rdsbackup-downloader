@@ -1,18 +1,7 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import str
-
-from future import standard_library
-standard_library.install_aliases()
-
 import logging
 import os
-import urllib
 import requests
 import base64
 import sys
@@ -24,15 +13,23 @@ from hashlib import sha1
 import json
 from subprocess import Popen, PIPE
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from builtins import str
+
+from future import standard_library
+standard_library.install_aliases()
+
 if sys.version_info[0] == 2:
     requests.packages.urllib3.contrib.pyopenssl.inject_into_urllib3()
     from urllib import quote
     from urllib import urlencode
-    #from urllib2 import HTTPError
 else:
     from urllib.parse import quote
     from urllib.parse import urlencode
-    #from urllib.error import HTTPError
 
 
 try:
@@ -50,9 +47,8 @@ try:
     ARIA2_BIN = "aria2c" if config['aria2_bin'] == "" else config['aria2_bin']
 
 except KeyError:
-    logger.error("Unable to locate Aliyun api credentials!")
+    print("Unable to locate Aliyun api credentials!")
     sys.exit(1)
-
 
 
 if not os.path.exists(LOG_DIR):
@@ -61,13 +57,14 @@ if not os.path.exists(LOG_DIR):
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M',
-                    #filename='%s/%s.log' % (LOG_DIR, time.strftime("%Y-%m-%dT%H:%M")),
-                    filename='%s/%s.log' % (LOG_DIR, time.strftime("%Y-%m-%d")),
+                    filename='%s/%s.log' % (LOG_DIR,
+                                            time.strftime("%Y-%m-%d")),
                     filemode='w')
 
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
-console.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
+console.setFormatter(logging.Formatter(
+    '%(name)-12s: %(levelname)-8s %(message)s'))
 logging.getLogger('').addHandler(console)
 
 
@@ -82,35 +79,39 @@ def _percent_encode(txt):
     res = res.replace('%7E', '~')
     return res
 
+
 def _compute_signature(parameters, access_key_secret):
-    sortedParameters = sorted(parameters.items(), key=lambda parameters: parameters[0])
+    sortedParameters = sorted(
+        parameters.items(), key=lambda parameters: parameters[0])
 
     canonicalizedQueryString = ''
-    for (k,v) in sortedParameters:
-        canonicalizedQueryString += '&' + _percent_encode(k) + '=' + _percent_encode(v)
+    for (k, v) in sortedParameters:
+        canonicalizedQueryString += '&' + \
+            _percent_encode(k) + '=' + _percent_encode(v)
 
     stringToSign = 'GET&%2F&' + _percent_encode(canonicalizedQueryString[1:])
     bs = access_key_secret + "&"
 
     h = hmac.new(
-        key = bytearray(bs, 'utf-8'),
-        msg = bytearray(stringToSign, 'utf-8'), 
-        digestmod = sha1
+        key=bytearray(bs, 'utf-8'),
+        msg=bytearray(stringToSign, 'utf-8'),
+        digestmod=sha1
     )
     signature = base64.encodestring(h.digest()).strip()
     return signature
 
+
 def _compose_url(params):
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-    parameters = { \
-            'Format'        : 'JSON', \
-            'Version'       : '2014-08-15', \
-            'AccessKeyId'   : ACCESS_KEY_ID, \
-            'SignatureVersion'  : '1.0', \
-            'SignatureMethod'   : 'HMAC-SHA1', \
-            'SignatureNonce'    : str(uuid.uuid1()), \
-            'Timestamp'         : timestamp, \
+    parameters = {
+        'Format': 'JSON',
+        'Version': '2014-08-15',
+        'AccessKeyId': ACCESS_KEY_ID,
+        'SignatureVersion': '1.0',
+        'SignatureMethod': 'HMAC-SHA1',
+        'SignatureNonce': str(uuid.uuid1()),
+        'Timestamp': timestamp,
     }
 
     for key in params.keys():
@@ -121,12 +122,12 @@ def _compose_url(params):
 
     url = "https://rds.aliyuncs.com/?" + urlencode(parameters)
 
-
     return url
+
 
 def _make_request(params):
     url = _compose_url(params)
-    
+
     r = requests.get(url)
 
     try:
@@ -139,6 +140,7 @@ def _make_request(params):
     except ValueError as e:
         raise SystemExit(e)
 
+
 def _add_lockfile(path):
     # TODO: check lockfile if file already exist script should throw error
     if not os.path.exists(path):
@@ -147,18 +149,23 @@ def _add_lockfile(path):
     with open(lockfile, 'a'):
         os.utime(lockfile, None)
 
+
 def _remove_lockfile(path):
     os.remove("%s/.lock" % path)
 
 
 def get_download_info():
-    #FUCK YOU ALIYUN
-    #api DescribeBackups time format yyyy-MM-dd’T’HH:mmZ
-    #api DescribeBinlogFiles time format yyyy-MM-dd’T’HH:mm:ssZ
-    starttime = time.strftime("%Y-%m-%dT%H:%M", time.gmtime(time.time() - 86400*datetime.timedelta(days=SEARCH_BEFORE_DAYS).days))
-    endtime = time.strftime("%Y-%m-%dT%H:%M", time.gmtime(time.time() - datetime.timedelta(seconds=1).seconds))
+    # FUCK YOU ALIYUN
+    # api DescribeBackups time format yyyy-MM-dd’T’HH:mmZ
+    # api DescribeBinlogFiles time format yyyy-MM-dd’T’HH:mm:ssZ
+    befroe_day = 86400 * datetime.timedelta(days=SEARCH_BEFORE_DAYS).days
+    starttime = time.strftime("%Y-%m-%dT%H:%M", time.gmtime(
+        time.time() - befroe_day))
+    now = time.time() - datetime.timedelta(seconds=1).seconds
+    endtime = time.strftime("%Y-%m-%dT%H:%M",
+                            time.gmtime(now))
     full_backups = []
-    binlogs =[]
+    binlogs = []
 
     if FETCH_FULLBACUP:
         logger.info("# Fetch fullbackup files list")
@@ -176,10 +183,10 @@ def get_download_info():
             items = resp['Items']['Backup']
             for item in items:
                 name = item['BackupDownloadURL'].split('/')[-1].split('?')[0]
-                full_backups.append({'filename': name, 'url': item['BackupDownloadURL'], 'checksum': None})
+                full_backups.append({'filename': name, 'url': item[
+                                    'BackupDownloadURL'], 'checksum': None})
         except KeyError:
             logger.error("Can't parse fullbackup list")
-
 
     if FETCH_BINLOG:
         logger.info("# Fetch binglog files list")
@@ -197,13 +204,17 @@ def get_download_info():
             items = resp['Items']['BinLogFile']
             for item in items:
                 name = item['DownloadLink'].split('/')[-1].split('?')[0]
-                binlogs.append({'filename': name, 'url': item['DownloadLink'],
-                 'checksum': item['Checksum'], 'instanceid': item['HostInstanceID'],
-                 'LogBeginTime': item['LogBeginTime'], 'LogEndTime': item['LogEndTime']})
+                binlogs.append({'filename': name,
+                                'url': item['DownloadLink'],
+                                'checksum': item['Checksum'],
+                                'instanceid': item['HostInstanceID'],
+                                'LogBeginTime': item['LogBeginTime'],
+                                'LogEndTime': item['LogEndTime']})
         except KeyError:
             logger.error("Can't parse binlog list")
 
     return {'full_backups': full_backups, 'binlogs': binlogs}
+
 
 def make_donwload_job(infos):
     logger.info("# Starting make download job file")
@@ -226,7 +237,7 @@ def make_donwload_job(infos):
                 f.write("  split=10\n\n")
         jobfiles['fucll_backup'] = filename
 
-    if FETCH_BINLOG:           
+    if FETCH_BINLOG:
         filename = "%s/binlog_%s.txt" % (JOB_DIR, now)
         with open(filename, 'w') as f:
             for item in infos['binlogs']:
@@ -244,14 +255,17 @@ def make_donwload_job(infos):
 
     return jobfiles
 
+
 def exec_download_job(job_files):
     if FETCH_FULLBACUP:
         job_file = job_files['fucll_backup']
-        logger.info("# Starting download fullbackup files, job file: %s", job_file)
+        logger.info(
+            "# Starting download fullbackup files, job file: %s", job_file)
 
         _add_lockfile(FULLBACUP_DIR)
-        p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
-            close_fds=True, bufsize = 1, universal_newlines = True)
+        p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE,
+                  stdout=PIPE, close_fds=True, bufsize=1,
+                  universal_newlines=True)
         output, err = p.communicate()
         if p.returncode == 0:
             logger.info("# Download fullbackup files success")
@@ -266,8 +280,9 @@ def exec_download_job(job_files):
         logger.info("# Starting download binlog files, job file: %s", job_file)
 
         _add_lockfile(BINLOG_DIR)
-        p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE, stdout=PIPE,
-            close_fds=True, bufsize = 1, universal_newlines = True)
+        p = Popen('%s -i %s' % (ARIA2_BIN, job_file),
+                  shell=True, stdin=PIPE, stdout=PIPE,
+                  close_fds=True, bufsize=1, universal_newlines=True)
         output, err = p.communicate()
         if p.returncode == 0:
             logger.info("# Download binlog files success")
@@ -277,13 +292,14 @@ def exec_download_job(job_files):
         _remove_lockfile(BINLOG_DIR)
         logger.debug("aria2 return:\n%s", output)
 
+
 def main():
     logger.info("# Downloader starting...")
     info = get_download_info()
     job = make_donwload_job(info)
     exec_download_job(job)
     # TODO: hook
-    
+
 
 if __name__ == '__main__':
     main()
