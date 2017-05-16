@@ -12,6 +12,9 @@ cp -f $DIR/rdsbackup.timer /etc/systemd/system/
 cp -f $DIR/sync_backup.service /etc/systemd/system/
 cp -f $DIR/sync_backup.timer /etc/systemd/system/
 
+cp -f $DIR/cleanup_backup.service /etc/systemd/system/
+cp -f $DIR/cleanup_backup.timer /etc/systemd/system/
+
 systemctl daemon-reload
 
 exit 0

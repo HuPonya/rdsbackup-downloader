@@ -3,3 +3,5 @@ IMAGE_NAME="rdsbackup-downloader"
 
 APP_DIR="/opt/db_backup/app"
 DATA_DIR="/opt/db_backup/data"
+
+CLEAN_BEFORE_DAYS=60

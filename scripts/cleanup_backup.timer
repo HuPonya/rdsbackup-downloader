@@ -1,0 +1,9 @@
+[Unit]
+Description=Run cleanup_backup.service everyday 7am
+ 
+[Timer]
+OnCalendar=*-*-* 07:00:00
+Unit=cleanup_backup.service
+ 
+[Install]
+WantedBy=multi-user.target

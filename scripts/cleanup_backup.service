@@ -1,0 +1,13 @@
+[Unit]
+Description=Auto cleanup outdate backupfile
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+EnvironmentFile=/opt/db_backup/scripts/rdsbackup-vars
+ExecStart=/bin/sh -c '/usr/bin/find ${DATA_DIR} -mtime +${CLEAN_BEFORE_DAYS} \( -name "*.gz" -or -name "*.tar" \) -delete'
+
+[Install]
+WantedBy=multi-user.target
