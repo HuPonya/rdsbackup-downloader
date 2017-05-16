@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import str
+from future import standard_library
+
 import logging
 import os
 import requests
@@ -13,14 +20,6 @@ from hashlib import sha1
 import json
 from subprocess import Popen, PIPE
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import str
-
-from future import standard_library
 standard_library.install_aliases()
 
 if sys.version_info[0] == 2:
