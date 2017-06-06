@@ -15,8 +15,11 @@
  - dbid, RDS实例ID。
  - data_dir，数据文件夹。
  - search_before_days, 搜索最早几天的备份文件。
+ - fetch_type, 下载模式 `full`全量依靠aira2去匹配下载文件 `difference` 差异下载依靠阿里云返回的参数下载文件
  - fetch_fullbacup, 下载全量备份。
  - fetch_binlog, 下载增量备份。
+
+注:当fetch_type为`difference`时会依赖阿里云接口返回的值来建立任务，其中全量备份中阿里没有提供有效的哈希值只能使用文件大小来校验文件。
 
 ### Docker化
 [dockerfile](dockerfile)

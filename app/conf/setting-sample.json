@@ -4,6 +4,7 @@
     "dbid": "",
     "data_dir": "/opt/project/tmp",
     "search_before_days": 7,
+    "fetch_type": "difference",
     "fetch_fullbacup": false,
     "fetch_binlog": true,
     "aria2_bin": ""

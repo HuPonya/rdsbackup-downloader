@@ -18,6 +18,8 @@ import hmac
 import uuid
 from hashlib import sha1
 import json
+import math
+import hashlib
 from subprocess import Popen, PIPE
 
 standard_library.install_aliases()
@@ -37,6 +39,7 @@ try:
     ACCESS_KEY_SECRET = config['key_secret']
     DBINSTANCEID = config['dbid']
     SEARCH_BEFORE_DAYS = config['search_before_days']
+    FETCH_TYPE = config['fetch_type']
     FETCH_FULLBACUP = config['fetch_fullbacup']
     FETCH_BINLOG = config['fetch_binlog']
     FULLBACUP_DIR = "%s/%s/fullbackup" % (config['data_dir'], DBINSTANCEID)
@@ -68,6 +71,25 @@ logging.getLogger('').addHandler(console)
 
 
 logger = logging.getLogger(__name__)
+
+
+def _convert_size(size_bytes):
+    if size_bytes == 0:
+        return "0B"
+
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return "%s %s" % (s, size_name[i])
+
+
+def _calculate_md5(filename):
+    hash_md5 = hashlib.md5()
+    with open(filename, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 
 # for ali api signature
@@ -182,8 +204,17 @@ def get_download_info():
             items = resp['Items']['Backup']
             for item in items:
                 name = item['BackupDownloadURL'].split('/')[-1].split('?')[0]
-                full_backups.append({'filename': name, 'url': item[
-                                    'BackupDownloadURL'], 'checksum': None})
+                if FETCH_TYPE == 'difference':
+                    filepath = "%s/%s" % (FULLBACUP_DIR, name)
+                    if os.path.exists(filepath):
+                        l_size = os.stat(filepath).st_size
+                        r_size = item['BackupSize']
+                        if _convert_size(l_size) == _convert_size(r_size):
+                            continue
+
+                full_backups.append({'filename': name,
+                                     'url': item['BackupDownloadURL'],
+                                     'checksum': None})
         except KeyError:
             logger.error("Can't parse fullbackup list")
 
@@ -203,6 +234,16 @@ def get_download_info():
             items = resp['Items']['BinLogFile']
             for item in items:
                 name = item['DownloadLink'].split('/')[-1].split('?')[0]
+                if FETCH_TYPE == 'difference':
+                    filepath = "%s/%s/%s" % (BINLOG_DIR,
+                                             item['HostInstanceID'],
+                                             name)
+                    if os.path.exists(filepath):
+                        l_md5 = _calculate_md5(filepath)
+                        r_md5 = item['Checksum']
+                        if l_md5 == r_md5:
+                            continue
+
                 binlogs.append({'filename': name,
                                 'url': item['DownloadLink'],
                                 'checksum': item['Checksum'],
@@ -231,6 +272,7 @@ def make_donwload_job(infos):
                 f.write('\n')
                 f.write(" dir=%s\n" % FULLBACUP_DIR)
                 f.write(" out=%s\n" % item['filename'])
+                f.write(" file-allocation=falloc\n")
                 f.write(" continue=true\n")
                 f.write(" max-connection-per-server=10\n")
                 f.write("  split=10\n\n")
