@@ -7,7 +7,7 @@ Requires=docker.service
 Type=oneshot
 TimeoutStartSec=0
 EnvironmentFile=/opt/db_backup/scripts/rdsbackup-vars
-ExecStartPre=-/usr/bin/docker run --name ${CONTAINER_NAME} -v ${APP_DIR}:/app:ro -v ${DATA_DIR}:/opt/db_backup/ ${IMAGE_NAME}
+ExecStartPre=-/usr/bin/docker run --name ${CONTAINER_NAME} -v ${APP_DIR}:/app:ro -v ${DATA_DIR}:/opt/db_backup/ ${IMAGE_NAME} ${CMD_ARGS}
 ExecStart=/usr/bin/docker start -a ${CONTAINER_NAME}
 
 [Install]

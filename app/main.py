@@ -20,6 +20,7 @@ from hashlib import sha1
 import json
 import math
 import hashlib
+import argparse
 from subprocess import Popen, PIPE
 
 standard_library.install_aliases()
@@ -42,10 +43,11 @@ try:
     FETCH_TYPE = config['fetch_type']
     FETCH_FULLBACUP = config['fetch_fullbacup']
     FETCH_BINLOG = config['fetch_binlog']
-    FULLBACUP_DIR = "%s/%s/fullbackup" % (config['data_dir'], DBINSTANCEID)
-    BINLOG_DIR = "%s/%s/binlog" % (config['data_dir'], DBINSTANCEID)
-    JOB_DIR = "%s/jobs" % config['data_dir']
-    LOG_DIR = "%s/log" % config['data_dir']
+    DATA_DIR = config['data_dir']
+    FULLBACUP_DIR = "%s/%s/fullbackup" % (DATA_DIR, DBINSTANCEID)
+    BINLOG_DIR = "%s/%s/binlog" % (DATA_DIR, DBINSTANCEID)
+    JOB_DIR = "%s/jobs" % DATA_DIR
+    LOG_DIR = "%s/log" % DATA_DIR
     ARIA2_BIN = "aria2c" if config['aria2_bin'] == "" else config['aria2_bin']
 
 except KeyError:
@@ -90,6 +92,23 @@ def _calculate_md5(filename):
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
+
+def _gen_hook_args(args):
+    s = ''
+    binlogs = args['binlogs']
+    full_backups = args['full_backups']
+    for item in binlogs:
+        filepath = "%s/%s/%s" % (BINLOG_DIR,
+                                 item['instanceid'],
+                                 item['filename'])
+        s = "%s\n%s" % (s, filepath)
+    for item in full_backups:
+        filepath = "%s/%s" % (FULLBACUP_DIR, item['filename'])
+        s = "%s\n%s" % (s, filepath)
+
+    s = "%s\n" % (s)
+    return s
 
 
 # for ali api signature
@@ -303,7 +322,6 @@ def exec_download_job(job_files):
         logger.info(
             "# Starting download fullbackup files, job file: %s", job_file)
 
-        _add_lockfile(FULLBACUP_DIR)
         p = Popen('%s -i %s' % (ARIA2_BIN, job_file), shell=True, stdin=PIPE,
                   stdout=PIPE, close_fds=True, bufsize=1,
                   universal_newlines=True)
@@ -313,14 +331,12 @@ def exec_download_job(job_files):
         else:
             logger.info("# Download fullbackup files error")
 
-        _remove_lockfile(FULLBACUP_DIR)
         logger.debug("aria2 return:\n%s", output)
 
     if FETCH_BINLOG:
         job_file = job_files['binglog']
         logger.info("# Starting download binlog files, job file: %s", job_file)
 
-        _add_lockfile(BINLOG_DIR)
         p = Popen('%s -i %s' % (ARIA2_BIN, job_file),
                   shell=True, stdin=PIPE, stdout=PIPE,
                   close_fds=True, bufsize=1, universal_newlines=True)
@@ -330,17 +346,28 @@ def exec_download_job(job_files):
         else:
             logger.info("# Download binlog files error")
 
-        _remove_lockfile(BINLOG_DIR)
         logger.debug("aria2 return:\n%s", output)
 
 
-def main():
+def main(args):
+    _add_lockfile(DATA_DIR)
     logger.info("# Downloader starting...")
     info = get_download_info()
     job = make_donwload_job(info)
     exec_download_job(job)
-    # TODO: hook
+
+    if args.hook:
+        hook_args = _gen_hook_args(info)
+        logger.debug("run hook args:\n%s", hook_args)
+        p = Popen([args.hook, hook_args])
+        p.wait()
+
+    _remove_lockfile(DATA_DIR)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--hook', action="store",
+                        help='hook script')
+    args = parser.parse_args()
+    main(args)
